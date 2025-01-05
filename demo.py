@@ -8,6 +8,11 @@ import numpy as np
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
+SAMPLE_RATE=16000
+STEP_MS=30
+sliding_window_average_size = 10
+probability_cutoff = 0.5
+
 def require_model():
     model_filename = "hey_jarvis.tflite"
     model_url = "https://github.com/esphome/micro-wake-word-models/raw/refs/heads/main/models/hey_jarvis.tflite"
@@ -28,23 +33,27 @@ def capture_audio_and_predict():
     # Initialize PyAudio
     p = pyaudio.PyAudio()
 
-    rate = 16000
+
     # Define audio stream parameters
     stream = p.open(format=pyaudio.paInt16,
                     channels=1,
-                    rate=rate,
+                    rate=SAMPLE_RATE,
                     input=True,
-                    frames_per_buffer=rate)
+                    frames_per_buffer=SAMPLE_RATE)
 
     try:
         while True:
             # Read audio data from the stream
-            audio_data = stream.read(rate)
+            read_buffer_size = sliding_window_average_size * SAMPLE_RATE * STEP_MS // 1000
+            audio_data = stream.read(read_buffer_size)
             # Convert audio data to numpy array
             data = np.frombuffer(audio_data, dtype=np.int16)
-            print(len(data))
-            # Call predict_clip with the captured audio data
-            print(model.predict_clip(data))
+            probabilities = model.predict_clip(data, step_ms=30)
+            print(probabilities)
+            avg = sum(probabilities) / len(probabilities)
+            if avg >= probability_cutoff:
+                print("detected")
+
     except KeyboardInterrupt:
         logging.info("Stopping audio capture.")
     finally:

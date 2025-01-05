@@ -75,7 +75,7 @@ class Model:
         """
 
         # Get the spectrogram
-        spectrogram = generate_features_for_clip(data, stride_ms=step_ms)
+        spectrogram = generate_features_for_clip(data, step_ms=step_ms)
 
         return self.predict_spectrogram(spectrogram)
 
